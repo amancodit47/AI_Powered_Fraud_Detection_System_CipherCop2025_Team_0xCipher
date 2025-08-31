@@ -348,10 +348,6 @@ This project demonstrates advanced fraud detection concepts and modern web devel
 
 This project is created for demonstration purposes and showcases AI-powered fraud detection capabilities in a modern web application.
 
-## 🔗 Live Demo
-
-Experience the AI-powered fraud detection system: https://ai-powered-fraud-det-c48v.bolt.host
-
 ---w
 
 **Built with ❤️ using React, TypeScript, TensorFlow.js, and Real AI Models**
