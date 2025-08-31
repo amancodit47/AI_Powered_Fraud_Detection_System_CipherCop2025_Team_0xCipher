@@ -348,6 +348,5 @@ This project demonstrates advanced fraud detection concepts and modern web devel
 
 This project is created for demonstration purposes and showcases AI-powered fraud detection capabilities in a modern web application.
 
----w
 
 **Built with ❤️ using React, TypeScript, TensorFlow.js, and Real AI Models**
