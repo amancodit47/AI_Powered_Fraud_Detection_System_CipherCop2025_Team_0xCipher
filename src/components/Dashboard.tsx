@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Shield, AlertTriangle, TrendingUp, Eye, Zap, Globe } from 'lucide-react';
 import ThreatCard from './ThreatCard';
 import RiskChart from './RiskChart';
+import { realTimeDetection, RealTimeAlert } from '../services/realTimeDetection';
+import AIModelStatus from './AIModelStatus';
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState({
@@ -11,44 +13,44 @@ const Dashboard: React.FC = () => {
     activeThreats: 0
   });
 
-  const [recentThreats] = useState([
-    {
-      id: '1',
-      url: 'paypal-secure-login.net',
-      type: 'Phishing',
-      riskScore: 95,
-      detected: '2 mins ago',
-      reasons: ['Domain spoofing', 'SSL certificate mismatch', 'Suspicious login form']
-    },
-    {
-      id: '2',
-      url: 'amazon-deals-app.apk',
-      type: 'Malicious App',
-      riskScore: 88,
-      detected: '5 mins ago',
-      reasons: ['Excessive permissions', 'Code obfuscation', 'Known malware signature']
-    },
-    {
-      id: '3',
-      url: 'microsoft-office-update.com',
-      type: 'Scam',
-      riskScore: 76,
-      detected: '12 mins ago',
-      reasons: ['Misleading content', 'Suspicious domain registration', 'Fake download links']
-    }
-  ]);
+  const [recentThreats, setRecentThreats] = useState<RealTimeAlert[]>([]);
+  const [isMonitoring, setIsMonitoring] = useState(false);
 
   useEffect(() => {
+    // Start real-time monitoring
+    realTimeDetection.startMonitoring();
+    setIsMonitoring(true);
+
+    // Subscribe to real-time alerts
+    const unsubscribe = realTimeDetection.subscribe((alert: RealTimeAlert) => {
+      setRecentThreats(prev => [alert, ...prev.slice(0, 4)]); // Keep last 5 alerts
+      
+      // Update stats when new threats are detected
+      setStats(prev => ({
+        ...prev,
+        threatsDetected: prev.threatsDetected + 1,
+        activeThreats: prev.activeThreats + (alert.blocked ? 1 : 0)
+      }));
+    });
+
+    // Load initial alerts
+    setRecentThreats(realTimeDetection.getRecentAlerts(5));
+
     const interval = setInterval(() => {
       setStats(prev => ({
         totalScanned: prev.totalScanned + Math.floor(Math.random() * 3) + 1,
-        threatsDetected: prev.threatsDetected + (Math.random() > 0.7 ? 1 : 0),
+        threatsDetected: prev.threatsDetected,
         riskScore: Math.floor(Math.random() * 20) + 15,
-        activeThreats: Math.floor(Math.random() * 5) + 12
+        activeThreats: prev.activeThreats
       }));
     }, 3000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+      realTimeDetection.stopMonitoring();
+      setIsMonitoring(false);
+    };
   }, []);
 
   const statCards = [
@@ -136,14 +138,33 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="space-y-4">
               {recentThreats.map((threat) => (
-                <ThreatCard key={threat.id} threat={threat} />
+                <ThreatCard 
+                  key={threat.id} 
+                  threat={{
+                    id: threat.id,
+                    url: threat.url,
+                    type: threat.threatType,
+                    riskScore: threat.riskScore,
+                    detected: this.formatTimeAgo(threat.timestamp),
+                    reasons: [`AI Model Detection: ${threat.threatType}`, `Risk Score: ${threat.riskScore}%`]
+                  }} 
+                />
               ))}
+              {recentThreats.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Shield className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>No recent threats detected</p>
+                  <p className="text-sm">AI monitoring is {isMonitoring ? 'active' : 'inactive'}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Risk Analysis */}
         <div className="space-y-6">
+          <AIModelStatus />
+          
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Risk Distribution</h3>
             <RiskChart />
@@ -177,6 +198,21 @@ const Dashboard: React.FC = () => {
       </div>
     </div>
   );
+
+  private formatTimeAgo(timestamp: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - timestamp.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} mins ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} days ago`;
+  }
 };
 
 export default Dashboard;

@@ -94,31 +94,56 @@ const ScanResult: React.FC<ScanResultProps> = ({ result, onNewScan }) => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-xl font-semibold text-gray-900 mb-6">Detailed AI Analysis</h3>
         
+        {/* Model Predictions */}
+        {result.modelPredictions && (
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-semibold text-gray-900 mb-3">AI Model Predictions</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-lg font-bold text-red-600">{result.modelPredictions.phishingProbability}%</div>
+                <div className="text-xs text-gray-500">Phishing</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-purple-600">{result.modelPredictions.malwareProbability}%</div>
+                <div className="text-xs text-gray-500">Malware</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-orange-600">{result.modelPredictions.scamProbability}%</div>
+                <div className="text-xs text-gray-500">Scam</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-600">{result.modelPredictions.legitimateProbability}%</div>
+                <div className="text-xs text-gray-500">Legitimate</div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             { 
-              label: 'NLP Analysis', 
+              label: 'NLP Model', 
               score: result.analysisDetails.nlpConfidence, 
               icon: Brain,
-              description: 'Content and language patterns'
+              description: 'Natural language processing confidence'
             },
             { 
-              label: 'Visual Similarity', 
+              label: 'Computer Vision', 
               score: result.analysisDetails.visualSimilarity, 
               icon: Eye,
-              description: 'UI/design resemblance to brands'
+              description: 'Visual similarity detection accuracy'
             },
             { 
               label: 'Domain Reputation', 
               score: result.analysisDetails.domainReputation, 
               icon: Shield,
-              description: 'DNS, WHOIS, and history analysis'
+              description: 'Domain intelligence and reputation score'
             },
             { 
-              label: 'Behavioral Score', 
+              label: 'Behavioral AI', 
               score: result.analysisDetails.behavioralScore, 
               icon: Activity,
-              description: 'Traffic and user interaction patterns'
+              description: 'Behavioral pattern recognition score'
             }
           ].map((analysis, index) => {
             const Icon = analysis.icon;

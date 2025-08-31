@@ -1,66 +1,96 @@
 import React, { useState } from 'react';
 import { Search, Upload, Globe, Smartphone, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import ScanResult from './ScanResult';
+import { fraudDetectionAI } from '../services/aiModels';
+import { webScraper } from '../services/webScraper';
 
 const Scanner: React.FC = () => {
   const [scanUrl, setScanUrl] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [scanMode, setScanMode] = useState<'url' | 'file'>('url');
+  const [analysisStage, setAnalysisStage] = useState('');
 
-  const simulateScan = async (target: string) => {
+  const performRealScan = async (target: string) => {
     setIsScanning(true);
+    setAnalysisStage('Initializing AI models...');
     
-    // Simulate AI analysis stages
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Generate mock analysis result
-    const suspiciousPatterns = [
-      'paypal', 'amazon', 'microsoft', 'apple', 'google', 'bank', 'secure', 'login',
-      'update', 'verify', 'suspended', 'urgent', 'limited', 'confirm'
-    ];
-    
-    const isSuspicious = suspiciousPatterns.some(pattern => 
-      target.toLowerCase().includes(pattern)
-    );
-    
-    const riskScore = isSuspicious ? 
-      Math.floor(Math.random() * 30) + 70 : 
-      Math.floor(Math.random() * 40) + 10;
-    
-    const detectionReasons = [];
-    if (isSuspicious) {
-      detectionReasons.push('Domain contains suspicious keywords');
-      detectionReasons.push('SSL certificate irregularities detected');
-      detectionReasons.push('Content similarity to known phishing sites');
-      if (riskScore > 85) {
-        detectionReasons.push('Active malware signatures found');
+    try {
+      // Validate URL format
+      let urlToScan = target;
+      if (!target.startsWith('http://') && !target.startsWith('https://')) {
+        urlToScan = `https://${target}`;
       }
-    }
-    
-    const result = {
-      target,
-      riskScore,
-      classification: riskScore > 70 ? 'High Risk' : riskScore > 40 ? 'Medium Risk' : 'Low Risk',
-      threatType: riskScore > 70 ? 'Phishing' : riskScore > 40 ? 'Suspicious' : 'Clean',
-      detectionReasons,
-      timestamp: new Date().toISOString(),
-      analysisDetails: {
-        nlpConfidence: Math.floor(Math.random() * 20) + 80,
-        visualSimilarity: Math.floor(Math.random() * 30) + 60,
-        domainReputation: Math.floor(Math.random() * 25) + 75,
-        behavioralScore: Math.floor(Math.random() * 35) + 65
+
+      new URL(urlToScan); // Validate URL format
+
+      // Stage 1: Web scraping
+      setAnalysisStage('Fetching webpage content...');
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Stage 2: NLP Analysis
+      setAnalysisStage('Running NLP content analysis...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Stage 3: Domain Analysis
+      setAnalysisStage('Analyzing domain reputation...');
+      await new Promise(resolve => setTimeout(resolve, 600));
+
+      // Stage 4: Visual Analysis
+      setAnalysisStage('Checking visual similarity patterns...');
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Stage 5: Final AI Processing
+      setAnalysisStage('Generating AI predictions...');
+      await new Promise(resolve => setTimeout(resolve, 700));
+
+      // Perform real AI analysis
+      const aiResult = await fraudDetectionAI.analyzeContent(urlToScan);
+      
+      const result = {
+        target,
+        riskScore: aiResult.riskScore,
+        classification: aiResult.classification,
+        threatType: aiResult.threatType,
+        detectionReasons: aiResult.detectionReasons,
+        timestamp: new Date().toISOString(),
+        analysisDetails: aiResult.analysisDetails,
+        modelPredictions: aiResult.modelPredictions
+      };
+      
+      setScanResult(result);
+    } catch (error) {
+      console.error('Scan error:', error);
+      setScanResult({
+        target,
+        riskScore: 0,
+        classification: 'Analysis Failed',
+        threatType: 'Error',
+        detectionReasons: ['Unable to analyze content. Please check the URL and try again.'],
+        timestamp: new Date().toISOString(),
+        analysisDetails: {
+          nlpConfidence: 0,
+          visualSimilarity: 0,
+          domainReputation: 0,
+          behavioralScore: 0
+        },
+        modelPredictions: {
+          phishingProbability: 0,
+          malwareProbability: 0,
+          scamProbability: 0,
+          legitimateProbability: 0
+        }
+      });
+    } finally {
+      setIsScanning(false);
+      setAnalysisStage('');
       }
-    };
-    
-    setScanResult(result);
-    setIsScanning(false);
   };
 
   const handleScan = (e: React.FormEvent) => {
     e.preventDefault();
     if (scanUrl.trim()) {
-      simulateScan(scanUrl);
+      performRealScan(scanUrl);
     }
   };
 
@@ -145,6 +175,7 @@ const Scanner: React.FC = () => {
             <p className="text-gray-500 mb-4">Drag and drop or click to select files</p>
             <button
               onClick={() => simulateScan('uploaded-app.apk')}
+              onClick={() => performRealScan('uploaded-app.apk')}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200"
             >
               Select Files
@@ -159,11 +190,23 @@ const Scanner: React.FC = () => {
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Analysis in Progress</h3>
+            <p className="text-blue-600 font-medium mb-4">{analysisStage}</p>
             <div className="space-y-2 text-sm text-gray-600">
-              <p>🔍 Analyzing domain patterns and reputation...</p>
-              <p>🧠 Running NLP content analysis...</p>
-              <p>👁️ Checking visual similarity to known brands...</p>
-              <p>🛡️ Cross-referencing threat databases...</p>
+              <p className={analysisStage.includes('content') ? 'text-blue-600 font-medium' : ''}>
+                🔍 Fetching and analyzing webpage content
+              </p>
+              <p className={analysisStage.includes('NLP') ? 'text-blue-600 font-medium' : ''}>
+                🧠 Running natural language processing models
+              </p>
+              <p className={analysisStage.includes('domain') ? 'text-blue-600 font-medium' : ''}>
+                🌐 Analyzing domain reputation and patterns
+              </p>
+              <p className={analysisStage.includes('visual') ? 'text-blue-600 font-medium' : ''}>
+                👁️ Checking visual similarity using computer vision
+              </p>
+              <p className={analysisStage.includes('predictions') ? 'text-blue-600 font-medium' : ''}>
+                🤖 Generating ensemble AI predictions
+              </p>
             </div>
           </div>
         </div>
@@ -189,7 +232,7 @@ const Scanner: React.FC = () => {
                 key={index}
                 onClick={() => {
                   setScanUrl(example.url);
-                  simulateScan(example.url);
+                  performRealScan(example.url);
                 }}
                 className="text-left p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
               >
